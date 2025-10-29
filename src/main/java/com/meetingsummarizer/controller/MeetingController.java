@@ -3,16 +3,18 @@ package com.meetingsummarizer.controller;
 import com.meetingsummarizer.model.request.ProcessMeetingRequest;
 import com.meetingsummarizer.model.response.*;
 import com.meetingsummarizer.service.MeetingService;
-import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.validation.annotation.Validated;
 
+import javax.validation.Valid;
 import java.util.List;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/meeting")
 @CrossOrigin(origins = "*")
+@Validated
 public class MeetingController {
 
     private final MeetingService meetingService;
@@ -21,9 +23,9 @@ public class MeetingController {
         this.meetingService = meetingService;
     }
 
-    @PostMapping("/summarize")
+    @PostMapping(value = "/summarize", consumes = "multipart/form-data")
     public ResponseEntity<ApiResponse<MeetingSummaryResponse>> summarizeMeeting(
-            @Valid @ModelAttribute ProcessMeetingRequest request) {
+            @Valid ProcessMeetingRequest request) {
         try {
             MeetingSummaryResponse response = meetingService.processMeeting(
                     request.getAudioFile(),

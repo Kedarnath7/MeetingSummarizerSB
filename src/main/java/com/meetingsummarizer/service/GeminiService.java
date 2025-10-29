@@ -1,122 +1,63 @@
 package com.meetingsummarizer.service;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.MediaType;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.client.RestTemplate;
 
-import java.util.Map;
-import java.util.HashMap;
-import java.util.List;
-import java.util.ArrayList;
+import java.util.*;
 
 @Service
 public class GeminiService {
 
-    private final WebClient webClient;
+    private final RestTemplate restTemplate;
 
-    @Value("${app.gemini.api-key}")
+    @Value("${app.gemini.api-key:test-key}")
     private String apiKey;
 
-    @Value("${app.gemini.model}")
-    private String model;
-
-    public GeminiService(WebClient.Builder webClientBuilder) {
-        this.webClient = webClientBuilder
-                .baseUrl("https://generativelanguage.googleapis.com/v1beta/models")
-                .build();
+    public GeminiService() {
+        this.restTemplate = new RestTemplate();
     }
 
     public Map<String, Object> generateSummary(String transcript) {
-        String prompt = """
-            Analyze the following meeting transcript and provide a structured summary in JSON format.
-            Include:
-            1. A concise overall summary
-            2. Key decisions made
-            3. Action items with assignees and deadlines
-            
-            Transcript:
-            %s
-            
-            Respond with JSON in this exact format:
-            {
-                "summary": "brief summary here",
-                "keyDecisions": ["decision1", "decision2", ...],
-                "actionItems": [
-                    {"task": "task description", "assignee": "person name", "deadline": "date or timeframe"}
-                ]
-            }
-            """.formatted(transcript);
-
-        Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("contents", List.of(
-                Map.of("parts", List.of(
-                        Map.of("text", prompt)
-                ))
-        ));
-
-        Map<String, Object> response = webClient.post()
-                .uri("/{model}:generateContent?key={key}", model, apiKey)
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(requestBody)
-                .retrieve()
-                .bodyToMono(Map.class)
-                .block();
-
-        return parseGeminiResponse(response);
-    }
-
-    @SuppressWarnings("unchecked")
-    private Map<String, Object> parseGeminiResponse(Map<String, Object> response) {
         try {
+            // Mock response for demo
+            // In real implementation, call Google Gemini API
+
             Map<String, Object> result = new HashMap<>();
+            result.put("summary", "The team meeting focused on Q2 project timelines and resource allocation. Frontend development is progressing well, while backend APIs are scheduled for completion next week. Key decisions were made regarding team expansion.");
 
-            List<Map<String, Object>> candidates = (List<Map<String, Object>>) response.get("candidates");
-            if (candidates != null && !candidates.isEmpty()) {
-                Map<String, Object> candidate = candidates.get(0);
-                Map<String, Object> content = (Map<String, Object>) candidate.get("content");
-                List<Map<String, Object>> parts = (List<Map<String, Object>>) content.get("parts");
-                String text = (String) parts.get(0).get("text");
+            result.put("keyDecisions", Arrays.asList(
+                    "Approve hiring of two additional developers",
+                    "Extend project deadline by one week",
+                    "Allocate additional budget for marketing campaign"
+            ));
 
-                // Parse the JSON response from Gemini
-                // In a real implementation, you'd use Jackson to parse the JSON string
-                return parseJsonResponse(text);
-            }
+            List<Map<String, String>> actionItems = new ArrayList<>();
+            actionItems.add(createActionItem("Prepare budget proposal", "John Doe", "2024-02-15"));
+            actionItems.add(createActionItem("Schedule technical interviews", "Sarah Smith", "2024-02-20"));
+            actionItems.add(createActionItem("Update project timeline", "Mike Johnson", "2024-02-18"));
+
+            result.put("actionItems", actionItems);
+
+            // Simulate processing time
+            Thread.sleep(1000);
+
+            return result;
+
         } catch (Exception e) {
-            throw new RuntimeException("Failed to parse Gemini response", e);
+            throw new RuntimeException("Summary generation failed: " + e.getMessage(), e);
         }
-
-        throw new RuntimeException("No valid response from Gemini");
     }
 
-    @SuppressWarnings("unchecked")
-    private Map<String, Object> parseJsonResponse(String jsonText) {
-        // Extract JSON from the response text (might be wrapped in markdown)
-        String cleanJson = jsonText.replaceAll("```json\\n?", "").replaceAll("\\n?```", "").trim();
-
-        // In a real implementation, use Jackson ObjectMapper
-        // For now, return a mock response
-        Map<String, Object> result = new HashMap<>();
-        result.put("summary", "Meeting discussed project timelines and resource allocation.");
-        result.put("keyDecisions", List.of(
-                "Approved Q2 budget for marketing",
-                "Hire two additional developers",
-                "Extend project deadline by two weeks"
-        ));
-
-        List<Map<String, String>> actionItems = new ArrayList<>();
-        actionItems.add(Map.of(
-                "task", "Prepare budget proposal",
-                "assignee", "John Doe",
-                "deadline", "2024-02-15"
-        ));
-        actionItems.add(Map.of(
-                "task", "Schedule technical interviews",
-                "assignee", "Jane Smith",
-                "deadline", "2024-02-20"
-        ));
-
-        result.put("actionItems", actionItems);
-        return result;
+    private Map<String, String> createActionItem(String task, String assignee, String deadline) {
+        Map<String, String> actionItem = new HashMap<>();
+        actionItem.put("task", task);
+        actionItem.put("assignee", assignee);
+        actionItem.put("deadline", deadline);
+        return actionItem;
     }
 }
